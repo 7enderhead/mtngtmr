@@ -1,4 +1,5 @@
 ﻿open System
+open System.Collections.Generic
 open System.Diagnostics
 open System.IO
 open Newtonsoft.Json
@@ -50,18 +51,41 @@ let participantFromId (shortcuts: seq<Shortcut>) (id: char) =
     |> Seq.find (fun s -> s.Id = id)
     |> (fun s -> s.Name)
 
+let rec inputLoop (watches: IDictionary<char, Stopwatch>) =
+    let mutable input = Console.ReadKey(true)
+    while not (input.Key = ConsoleKey.Escape) do
+        for entry in watches do
+            entry.Value.Stop()
+        let c = input.KeyChar
+        if watches.ContainsKey(c) then
+            let watch = watches.Item(c)
+            if watch.IsRunning then
+                watch.Stop()
+                printfn "stopped %c" c
+            else
+                watch.Start()
+                printfn "started %c" c
+        else
+        input <- Console.ReadKey(true)
+
+let printShortcuts (shortcuts: seq<Shortcut>) =
+    shortcuts
+    |> Seq.iter (fun s -> printfn "%c: %s" s.Id s.Name)
+
 let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
     let start = DateTime.Now
     
-    let stopwatches =
+    let watches =
         shortcuts
         |> Seq.map (fun s -> s.Id, Stopwatch())
         |> dict
     
+    inputLoop watches 
+    
     let theEnd = DateTime.Now
     
     let times =
-        stopwatches
+        watches
         |> Seq.map (fun pair ->
             { Participant = (participantFromId shortcuts pair.Key)
             ; Duration = pair.Value.Elapsed })
@@ -73,6 +97,7 @@ let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
 
 let session (dataPath: string) (name: string) =
     let data = load dataPath
+    printShortcuts data.Shortcuts
     let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton (getSessionData name data.Shortcuts)) }
     save dataPath newData
 
