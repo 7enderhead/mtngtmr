@@ -1,7 +1,7 @@
 ﻿open System
 open System.Diagnostics
+open System.IO
 open Newtonsoft.Json
-open CommandLine
 
 type Shortcut =
     { Id: char
@@ -18,7 +18,8 @@ type Session =
     ; Times: seq<Time> }
 
 type Data =
-    { Shortcuts: seq<Shortcut>
+    { Version: int
+    ; Shortcuts: seq<Shortcut>
     ; Sessions: seq<Session> }
 
 let jsonSettings () =
@@ -26,26 +27,63 @@ let jsonSettings () =
     settings.Formatting <- Formatting.Indented
     settings
 
-let testData () =
-    let t1 = { Participant = "Reinhard"; Duration = new TimeSpan(0, 4, 30) }
-    let t2 = { Participant = "Christian"; Duration = new TimeSpan(0, 2, 00) }
-    let session =
-        { Name = "Stand Up"
-        ; Start = DateTime.Now.Subtract(new TimeSpan(0, 30, 0))
-        ; End = DateTime.Now
-        ; Times = seq {t1; t2} }
-    let data =
-        { Shortcuts = seq { {Id='r'; Name = "Reinhard"}; {Id='c'; Name = "Christian"}  }
-        ; Sessions = seq { session } }
-    data
+let defaultData  =
+    { Version = 1
+    ; Shortcuts = seq { {Id='a'; Name = "Angelina"}; {Id='b'; Name = "Bernardo"}  }
+    ; Sessions = Seq.empty }
+
+let load (dataPath: string) =
+    let json = File.ReadAllText(dataPath)
+    JsonConvert.DeserializeObject<Data> json
+
+let save (dataPath: string) (data: Data) =
+    let json = JsonConvert.SerializeObject data
+    File.WriteAllText(dataPath, json)
+
+let create (dataPath: string) =
+    if File.Exists(dataPath) then
+        failwith (sprintf "data file %s already exists" dataPath)
+    else save dataPath defaultData
+
+let participantFromId (shortcuts: seq<Shortcut>) (id: char) =
+    shortcuts
+    |> Seq.find (fun s -> s.Id = id)
+    |> (fun s -> s.Name)
+
+let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
+    let start = DateTime.Now
+    
+    let stopwatches =
+        shortcuts
+        |> Seq.map (fun s -> s.Id, Stopwatch())
+        |> dict
+    
+    let theEnd = DateTime.Now
+    
+    let times =
+        stopwatches
+        |> Seq.map (fun pair ->
+            { Participant = (participantFromId shortcuts pair.Key)
+            ; Duration = pair.Value.Elapsed })
+        
+    { Name = name
+    ; Start = start
+    ; End = theEnd
+    ; Times = times}
+
+let session (dataPath: string) (name: string) =
+    let data = load dataPath
+    let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton (getSessionData name data.Shortcuts)) }
+    save dataPath newData
 
 [<EntryPoint>]
 let main argv =
     JsonConvert.DefaultSettings <- System.Func<_>(jsonSettings)
-//    
-//    
-//    let json = JsonConvert.SerializeObject (testData ())
-//    let dataDeserialized = JsonConvert.DeserializeObject<Data> json
-//    printfn "%A" dataDeserialized
+    
+    let dataPath = argv.[0]
+    match argv.[1] with
+    | "session" -> session dataPath argv.[2]
+    | "create" -> create dataPath
+    | _ -> failwith "unknown command, try 'session', 'create'"
 
-    0 // return an integer exit code
+    0
