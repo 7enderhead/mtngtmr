@@ -23,6 +23,12 @@ type Data =
     ; Shortcuts: seq<Shortcut>
     ; Sessions: seq<Session> }
 
+type Timer =
+    { Shortcut: Shortcut
+    ; Watch: Stopwatch }
+
+type Timers = IDictionary<char, Timer>
+
 let jsonSettings () =
     let settings = JsonSerializerSettings()
     settings.Formatting <- Formatting.Indented
@@ -51,21 +57,32 @@ let participantFromId (shortcuts: seq<Shortcut>) (id: char) =
     |> Seq.find (fun s -> s.Id = id)
     |> (fun s -> s.Name)
 
-let rec inputLoop (watches: IDictionary<char, Stopwatch>) =
+
+
+let stopAll (timers: Timers) =
+    timers
+    |> Seq.iter (fun entry -> entry.Value.Watch.Stop())
+
+//let outputWatches (watches: IDictionary<Shortcut, Stopwatch>)
+//    for entry in watches do
+//        entry.
+
+
+
+let inputLoop (timers: Timers) =
     let mutable input = Console.ReadKey(true)
     while not (input.Key = ConsoleKey.Escape) do
-        for entry in watches do
-            entry.Value.Stop()
-        let c = input.KeyChar
-        if watches.ContainsKey(c) then
-            let watch = watches.Item(c)
-            if watch.IsRunning then
-                watch.Stop()
-                printfn "stopped %c" c
-            else
-                watch.Start()
-                printfn "started %c" c
+        if input.Key = ConsoleKey.Spacebar then
+            stopAll timers
         else
+            let c = input.KeyChar
+            if timers.ContainsKey(c) then
+                let watch = timers.Item(c).Watch
+                if watch.IsRunning then
+                    watch.Stop()
+                else
+                    watch.Start()
+         
         input <- Console.ReadKey(true)
 
 let printShortcuts (shortcuts: seq<Shortcut>) =
@@ -75,20 +92,20 @@ let printShortcuts (shortcuts: seq<Shortcut>) =
 let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
     let start = DateTime.Now
     
-    let watches =
+    let timers =
         shortcuts
-        |> Seq.map (fun s -> s.Id, Stopwatch())
+        |> Seq.map (fun s -> s.Id, { Shortcut = s; Watch = Stopwatch() })
         |> dict
     
-    inputLoop watches 
+    inputLoop timers 
     
     let theEnd = DateTime.Now
     
     let times =
-        watches
-        |> Seq.map (fun pair ->
-            { Participant = (participantFromId shortcuts pair.Key)
-            ; Duration = pair.Value.Elapsed })
+        timers
+        |> Seq.map (fun entry ->
+            { Participant = entry.Value.Shortcut.Name
+            ; Duration = entry.Value.Watch.Elapsed })
         
     { Name = name
     ; Start = start
