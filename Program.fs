@@ -3,6 +3,7 @@ open System.Collections.Generic
 open System.Diagnostics
 open System.IO
 open Newtonsoft.Json
+open ConsoleTables
 
 type Shortcut =
     { Id: char
@@ -64,14 +65,17 @@ let stopAll (timers: Timers) =
 
 let showOutput (timers: Timers) =
     let startPosition = getCursorPosition ()
+    let table = ConsoleTable("Act.", "Id", "Name", "Talk Time")
+    let totalTime = timers |> Seq.fold (fun (acc: TimeSpan) t -> acc.Add(t.Value.Watch.Elapsed)) (TimeSpan())
     timers
     |> Seq.iter
            (fun t ->
-                printfn "%s %c - %s: %s"
-                    (if t.Value.Watch.IsRunning then "==>" else "   ")
-                    t.Key
-                    t.Value.Shortcut.Name
-                    (t.Value.Watch.Elapsed.ToString(@"hh\:mm\:ss")))
+                table.AddRow((if t.Value.Watch.IsRunning then "==>" else String.Empty),
+                             t.Key,
+                             t.Value.Shortcut.Name,
+                             (t.Value.Watch.Elapsed.ToString(@"hh\:mm\:ss"))) |> ignore)
+    table.AddRow(String.Empty, ' ', "Total", totalTime.ToString(@"hh\:mm\:ss"))
+    |> (fun t-> t.Write(Format.Minimal))
     let endPosition = getCursorPosition ()
     setCursorPosition startPosition
     endPosition
@@ -95,6 +99,7 @@ let inputLoop (timers: Timers) =
                         watch.Start()
             newKeyPress <- false
         endPosition <- showOutput timers
+        Threading.Thread.Sleep(300)
         if Console.KeyAvailable then
             input <- Console.ReadKey(true)
             newKeyPress <- true
