@@ -63,32 +63,50 @@ let stopAll (timers: Timers) =
     timers
     |> Seq.iter (fun entry -> entry.Value.Watch.Stop())
 
-//let outputWatches (watches: IDictionary<Shortcut, Stopwatch>)
-//    for entry in watches do
-//        entry.
-
-
+let showOutput (timers: Timers) =
+    let left = Console.CursorLeft
+    let top = Console.CursorTop
+    
+    timers
+    |> Seq.iter
+           (fun t ->
+                printfn "%s %c - %s: %s"
+                    (if t.Value.Watch.IsRunning then "==>" else "   ")
+                    t.Key
+                    t.Value.Shortcut.Name
+                    (t.Value.Watch.Elapsed.ToString(@"hh\:mm\:ss")))
+           
+    Console.SetCursorPosition(left, top)
 
 let inputLoop (timers: Timers) =
+    let originalPosition = Console.CursorLeft, Console.CursorTop
+    showOutput timers
     let mutable input = Console.ReadKey(true)
+    let mutable newKeyPress = true
     while not (input.Key = ConsoleKey.Escape) do
-        if input.Key = ConsoleKey.Spacebar then
-            stopAll timers
-        else
-            let c = input.KeyChar
-            if timers.ContainsKey(c) then
-                let watch = timers.Item(c).Watch
-                if watch.IsRunning then
-                    watch.Stop()
-                else
-                    watch.Start()
-         
-        input <- Console.ReadKey(true)
-
-let printShortcuts (shortcuts: seq<Shortcut>) =
-    shortcuts
-    |> Seq.iter (fun s -> printfn "%c: %s" s.Id s.Name)
-
+        if newKeyPress then
+            if input.Key = ConsoleKey.Spacebar then
+                stopAll timers
+            else
+                let c = input.KeyChar
+                if timers.ContainsKey(c) then
+                    let watch = timers.Item(c).Watch
+                    if watch.IsRunning then
+                        watch.Stop()
+                    else
+                        stopAll timers
+                        watch.Start()
+            newKeyPress <- false
+            
+        showOutput timers
+        System.Threading.Thread.Sleep(500)
+        
+        if Console.KeyAvailable then
+            input <- Console.ReadKey(true)
+            newKeyPress <- true
+     
+    Console.SetCursorPosition(fst originalPosition, snd originalPosition)
+     
 let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
     let start = DateTime.Now
     
@@ -114,13 +132,14 @@ let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
 
 let session (dataPath: string) (name: string) =
     let data = load dataPath
-    printShortcuts data.Shortcuts
     let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton (getSessionData name data.Shortcuts)) }
     save dataPath newData
 
 [<EntryPoint>]
 let main argv =
     JsonConvert.DefaultSettings <- System.Func<_>(jsonSettings)
+    let visible = Console.CursorVisible
+    Console.CursorVisible <- false
     
     let dataPath = argv.[0]
     match argv.[1] with
@@ -128,4 +147,6 @@ let main argv =
     | "create" -> create dataPath
     | _ -> failwith "unknown command, try 'session', 'create'"
 
+    Console.CursorVisible <- visible
+    
     0
