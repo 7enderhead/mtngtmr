@@ -63,18 +63,24 @@ let stopAll (timers: Timers) =
     timers
     |> Seq.iter (fun entry -> entry.Value.Watch.Stop())
 
+let format (span: TimeSpan) =
+    span.ToString(@"hh\:mm\:ss")
+
 let showOutput (timers: Timers) =
-    let startPosition = getCursorPosition ()
-    let table = ConsoleTable("Act.", "Id", "Name", "Talk Time")
+    let startPosition = getCursorPosition () 
+    let table = ConsoleTable("Act.", "Id", "Name", "Talk Time", "Perc.")
     let totalTime = timers |> Seq.fold (fun (acc: TimeSpan) t -> acc.Add(t.Value.Watch.Elapsed)) (TimeSpan())
     timers
     |> Seq.iter
            (fun t ->
-                table.AddRow((if t.Value.Watch.IsRunning then "==>" else String.Empty),
+                let elapsed = t.Value.Watch.Elapsed
+                table.AddRow((if t.Value.Watch.IsRunning then "--->" else String.Empty),
                              t.Key,
                              t.Value.Shortcut.Name,
-                             (t.Value.Watch.Elapsed.ToString(@"hh\:mm\:ss"))) |> ignore)
-    table.AddRow(String.Empty, ' ', "Total", totalTime.ToString(@"hh\:mm\:ss"))
+                             format elapsed,
+                             sprintf "%s%%" (String.Format("{0,3:0}", elapsed.Divide(totalTime) * 100.0)))
+                |> ignore)
+    table.AddRow(String.Empty, ' ', "Total", format totalTime, "100%")
     |> (fun t-> t.Write(Format.Minimal))
     let endPosition = getCursorPosition ()
     setCursorPosition startPosition
