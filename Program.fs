@@ -98,7 +98,7 @@ let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
             else
                 stopAll timers
                 watch.Start()
-        else
+        elif not (Char.IsControl(c)) then
             stopAll timers
             let watch = Stopwatch()
             watch.Start()
@@ -107,7 +107,6 @@ let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
                            { Id = c
                            ; Name = sprintf "Unknown '%c'" c }
                        ; Watch = watch })
-            
 
 let inputLoop (timers: Timers) =
     let mutable endPosition = showOutput timers
