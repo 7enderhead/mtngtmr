@@ -80,7 +80,7 @@ let showOutput (timers: Timers) =
                              format elapsed,
                              sprintf "%s%%" (String.Format("{0,3:0}", elapsed.Divide(totalTime) * 100.0)))
                 |> ignore)
-    table.AddRow(String.Empty, ' ', "Total", format totalTime, "100%")
+    table.AddRow(String.Empty, ' ', "Total Talk", format totalTime, "100%")
     |> (fun t-> t.Write(Format.Minimal))
     let endPosition = getCursorPosition ()
     setCursorPosition startPosition
@@ -135,15 +135,22 @@ let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
     let theEnd = DateTime.Now
     let times =
         timers
+        |> Seq.filter (fun entry -> not (entry.Value.Watch.Elapsed.Equals(TimeSpan.Zero)))
         |> Seq.map (fun entry ->
             { Participant = entry.Value.Shortcut.Name
             ; Duration = entry.Value.Watch.Elapsed })
     { Name = name; Start = start; End = theEnd; Times = times}
 
+let timeSum (times: seq<Time>) =
+    times
+    |> Seq.fold (fun (sum: TimeSpan) time -> sum.Add(time.Duration)) TimeSpan.Zero
+
 let session (dataPath: string) (name: string) =
     let data = load dataPath
-    let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton (getSessionData name data.Shortcuts)) }
-    save dataPath newData
+    let newSession = getSessionData name data.Shortcuts
+    if not ((timeSum newSession.Times).Equals(TimeSpan.Zero)) then
+        let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton (getSessionData name data.Shortcuts)) }
+        save dataPath newData
 
 [<EntryPoint>]
 let main argv =
@@ -157,5 +164,5 @@ let main argv =
         | "create" -> create dataPath
         | _ -> failwith "unknown command, try 'session', 'create'"
         0
-     finally
+    finally
         Console.CursorVisible <- visible
