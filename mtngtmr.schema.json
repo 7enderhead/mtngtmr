@@ -1,0 +1,150 @@
+{
+	"definitions": {},
+	"$schema": "http://json-schema.org/draft-07/schema#", 
+	"$id": "https://example.com/object1595210897.json", 
+	"title": "Root", 
+	"type": "object",
+	"required": [
+		"SchemaVersion",
+		"Shortcuts",
+		"Sessions"
+	],
+	"properties": {
+		"SchemaVersion": {
+			"$id": "#root/SchemaVersion", 
+			"title": "Schemaversion", 
+			"type": "string",
+			"default": "",
+			"examples": [
+				"0.3"
+			],
+			"pattern": "^.*$"
+		},
+		"Shortcuts": {
+			"$id": "#root/Shortcuts", 
+			"title": "Shortcuts", 
+			"type": "array",
+			"default": [],
+			"items":{
+				"$id": "#root/Shortcuts/items", 
+				"title": "Items", 
+				"type": "object",
+				"required": [
+					"Id",
+					"Name"
+				],
+				"properties": {
+					"Id": {
+						"$id": "#root/Shortcuts/items/Id", 
+						"title": "Id", 
+						"type": "string",
+						"default": "",
+						"examples": [
+							"a"
+						],
+						"pattern": "^.*$"
+					},
+					"Name": {
+						"$id": "#root/Shortcuts/items/Name", 
+						"title": "Name", 
+						"type": "string",
+						"default": "",
+						"examples": [
+							"Angelina"
+						],
+						"pattern": "^.*$"
+					}
+				}
+			}
+
+		},
+		"Sessions": {
+			"$id": "#root/Sessions", 
+			"title": "Sessions", 
+			"type": "array",
+			"default": [],
+			"items":{
+				"$id": "#root/Sessions/items", 
+				"title": "Items", 
+				"type": "object",
+				"required": [
+					"Name",
+					"Start",
+					"End",
+					"Times"
+				],
+				"properties": {
+					"Name": {
+						"$id": "#root/Sessions/items/Name", 
+						"title": "Name", 
+						"type": "string",
+						"default": "",
+						"examples": [
+							""
+						],
+						"pattern": "^.*$"
+					},
+					"Start": {
+						"$id": "#root/Sessions/items/Start", 
+						"title": "Start", 
+						"type": "string",
+						"default": "",
+						"examples": [
+							"2020-07-20T03:58:35.2257062+02:00"
+						],
+						"pattern": "^.*$"
+					},
+					"End": {
+						"$id": "#root/Sessions/items/End", 
+						"title": "End", 
+						"type": "string",
+						"default": "",
+						"examples": [
+							"2020-07-20T03:58:47.6591268+02:00"
+						],
+						"pattern": "^.*$"
+					},
+					"Times": {
+						"$id": "#root/Sessions/items/Times", 
+						"title": "Times", 
+						"type": "array",
+						"default": [],
+						"items":{
+							"$id": "#root/Sessions/items/Times/items", 
+							"title": "Items", 
+							"type": "object",
+							"required": [
+								"Participant",
+								"Duration"
+							],
+							"properties": {
+								"Participant": {
+									"$id": "#root/Sessions/items/Times/items/Participant", 
+									"title": "Participant", 
+									"type": "string",
+									"default": "",
+									"examples": [
+										"Angelina"
+									],
+									"pattern": "^.*$"
+								},
+								"Duration": {
+									"$id": "#root/Sessions/items/Times/items/Duration", 
+									"title": "Duration", 
+									"type": "string",
+									"default": "",
+									"examples": [
+										"00:00:00"
+									],
+									"pattern": "^.*$"
+								}
+							}
+						}
+
+					}
+				}
+			}
+
+		}
+	}
+}
