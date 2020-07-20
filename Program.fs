@@ -28,7 +28,9 @@ type Timer =
     { Shortcut: Shortcut
     ; Watch: Stopwatch }
 
-type Timers = IDictionary<char, Timer>
+type Timers =
+    { Data: IDictionary<char, Timer>
+    ; StartTime: DateTime }
 
 let jsonSettings () =
     let settings = JsonSerializerSettings()
@@ -60,17 +62,20 @@ let setCursorPosition (position: int * int) =
     Console.SetCursorPosition(fst position, snd position)
 
 let stopAll (timers: Timers) =
-    timers
+    timers.Data
     |> Seq.iter (fun entry -> entry.Value.Watch.Stop())
 
 let format (span: TimeSpan) =
     span.ToString(@"hh\:mm\:ss")
 
+let formatPercentage (part: TimeSpan) (total: TimeSpan) =
+    sprintf "%s%%" (String.Format("{0,3:0}", part.Divide(total) * 100.0))
+
 let showOutput (timers: Timers) =
     let startPosition = getCursorPosition () 
     let table = ConsoleTable("Act.", "Id", "Name", "Talk Time", "Perc.")
-    let totalTime = timers |> Seq.fold (fun (acc: TimeSpan) t -> acc.Add(t.Value.Watch.Elapsed)) (TimeSpan())
-    timers
+    let totalTalkTime = timers.Data |> Seq.fold (fun (acc: TimeSpan) t -> acc.Add(t.Value.Watch.Elapsed)) (TimeSpan())
+    timers.Data
     |> Seq.iter
            (fun t ->
                 let elapsed = t.Value.Watch.Elapsed
@@ -78,10 +83,12 @@ let showOutput (timers: Timers) =
                              t.Key,
                              t.Value.Shortcut.Name,
                              format elapsed,
-                             sprintf "%s%%" (String.Format("{0,3:0}", elapsed.Divide(totalTime) * 100.0)))
+                             formatPercentage elapsed totalTalkTime)
                 |> ignore)
-    table.AddRow(String.Empty, ' ', "Total Talk", format totalTime, "100%")
-    |> (fun t-> t.Write(Format.Minimal))
+    let totalTime = DateTime.Now.Subtract(timers.StartTime)
+    table.AddRow(String.Empty, ' ', "Total Talk", format totalTalkTime, "----")
+    |> (fun t -> t.AddRow(String.Empty, ' ', "Total", format totalTime, formatPercentage totalTalkTime totalTime ))
+    |> (fun t -> t.Write(Format.Minimal))
     let endPosition = getCursorPosition ()
     setCursorPosition startPosition
     endPosition
@@ -91,8 +98,8 @@ let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
         stopAll timers
     else
         let c = input.KeyChar
-        if timers.ContainsKey(c) then
-            let watch = timers.Item(c).Watch
+        if timers.Data.ContainsKey(c) then
+            let watch = timers.Data.Item(c).Watch
             if watch.IsRunning then
                 watch.Stop()
             else
@@ -102,7 +109,7 @@ let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
             stopAll timers
             let watch = Stopwatch()
             watch.Start()
-            timers.Add(c,
+            timers.Data.Add(c,
                        { Shortcut =
                            { Id = c
                            ; Name = sprintf "Unknown '%c'" c }
@@ -130,7 +137,7 @@ let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
         |> Seq.map (fun s -> s.Id, { Shortcut = s; Watch = Stopwatch() })
         |> dict
         |> (fun d -> Dictionary(d))
-    inputLoop timers 
+    inputLoop { Data = timers; StartTime = start }
     let theEnd = DateTime.Now
     let times =
         timers
