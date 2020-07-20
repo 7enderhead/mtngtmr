@@ -149,7 +149,7 @@ let session (dataPath: string) (name: string) =
     let data = load dataPath
     let newSession = getSessionData name data.Shortcuts
     if not ((timeSum newSession.Times).Equals(TimeSpan.Zero)) then
-        let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton (getSessionData name data.Shortcuts)) }
+        let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton newSession) }
         save dataPath newData
 
 [<EntryPoint>]
