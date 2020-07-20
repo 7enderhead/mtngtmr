@@ -20,7 +20,7 @@ type Session =
     ; Times: seq<Time> }
 
 type Data =
-    { Version: int
+    { SchemaVersion: Version
     ; Shortcuts: seq<Shortcut>
     ; Sessions: seq<Session> }
 
@@ -36,7 +36,7 @@ let jsonSettings () =
     settings
 
 let defaultData  =
-    { Version = 1
+    { SchemaVersion = Version(0, 3)
     ; Shortcuts = seq { {Id='a'; Name = "Angelina"}; {Id='b'; Name = "Bernardo"}  }
     ; Sessions = Seq.empty }
 
@@ -86,23 +86,36 @@ let showOutput (timers: Timers) =
     setCursorPosition startPosition
     endPosition
 
+let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
+    if input.Key = ConsoleKey.Spacebar then
+        stopAll timers
+    else
+        let c = input.KeyChar
+        if timers.ContainsKey(c) then
+            let watch = timers.Item(c).Watch
+            if watch.IsRunning then
+                watch.Stop()
+            else
+                stopAll timers
+                watch.Start()
+        else
+            stopAll timers
+            let watch = Stopwatch()
+            watch.Start()
+            timers.Add(c,
+                       { Shortcut =
+                           { Id = c
+                           ; Name = sprintf "Unknown '%c'" c }
+                       ; Watch = watch })
+            
+
 let inputLoop (timers: Timers) =
     let mutable endPosition = showOutput timers
     let mutable input = Console.ReadKey(true)
     let mutable newKeyPress = true
     while not (input.Key = ConsoleKey.Escape) do
         if newKeyPress then
-            if input.Key = ConsoleKey.Spacebar then
-                stopAll timers
-            else
-                let c = input.KeyChar
-                if timers.ContainsKey(c) then
-                    let watch = timers.Item(c).Watch
-                    if watch.IsRunning then
-                        watch.Stop()
-                    else
-                        stopAll timers
-                        watch.Start()
+            handleKeyPress input timers
             newKeyPress <- false
         endPosition <- showOutput timers
         Threading.Thread.Sleep(300)
@@ -117,6 +130,7 @@ let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
         shortcuts
         |> Seq.map (fun s -> s.Id, { Shortcut = s; Watch = Stopwatch() })
         |> dict
+        |> (fun d -> Dictionary(d))
     inputLoop timers 
     let theEnd = DateTime.Now
     let times =
