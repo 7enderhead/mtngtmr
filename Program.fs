@@ -2,6 +2,7 @@
 open System.Collections.Generic
 open System.Diagnostics
 open System.IO
+open System.Text
 open Newtonsoft.Json
 open ConsoleTables
 
@@ -43,12 +44,12 @@ let defaultData  =
     ; Sessions = Seq.empty }
 
 let load (dataPath: string) =
-    let json = File.ReadAllText(dataPath)
+    let json = File.ReadAllText(dataPath, Encoding.UTF8)
     JsonConvert.DeserializeObject<Data> json
 
 let save (dataPath: string) (data: Data) =
     let json = JsonConvert.SerializeObject data
-    File.WriteAllText(dataPath, json)
+    File.WriteAllText(dataPath, json, Encoding.UTF8)
 
 let create (dataPath: string) =
     if File.Exists(dataPath) then
@@ -72,6 +73,7 @@ let formatPercentage (part: TimeSpan) (total: TimeSpan) =
     sprintf "%s%%" (String.Format("{0,3:0}", part.Divide(total) * 100.0))
 
 let showOutput (timers: Timers) =
+    Console.CursorVisible <- false
     let startPosition = getCursorPosition () 
     let table = ConsoleTable("Act.", "Id", "Name", "Talk Time", "Perc.")
     let totalTalkTime = timers.Data |> Seq.fold (fun (acc: TimeSpan) t -> acc.Add(t.Value.Watch.Elapsed)) (TimeSpan())
@@ -137,6 +139,8 @@ let getSessionData (name: string) (shortcuts: seq<Shortcut>) =
         |> Seq.map (fun s -> s.Id, { Shortcut = s; Watch = Stopwatch() })
         |> dict
         |> (fun d -> Dictionary(d))
+    if not (timers.Count = Seq.length shortcuts) then
+        printfn "Warning: duplicate shortcut definitions, some entries are missing..." 
     inputLoop { Data = timers; StartTime = start }
     let theEnd = DateTime.Now
     let times =
