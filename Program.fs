@@ -147,13 +147,15 @@ let session (dataPath: string) (name: string) =
 
 [<EntryPoint>]
 let main argv =
-    JsonConvert.DefaultSettings <- System.Func<_>(jsonSettings)
     let visible = Console.CursorVisible
-    Console.CursorVisible <- false
-    let dataPath = argv.[0]
-    match argv.[1] with
-    | "session" -> session dataPath (if Array.length argv >= 3 then argv.[2] else String.Empty)
-    | "create" -> create dataPath
-    | _ -> failwith "unknown command, try 'session', 'create'"
-    Console.CursorVisible <- visible
-    0
+    try
+        JsonConvert.DefaultSettings <- System.Func<_>(jsonSettings)
+        Console.CursorVisible <- false
+        let dataPath = argv.[0]
+        match argv.[1] with
+        | "session" -> session dataPath (if Array.length argv >= 3 then argv.[2] else String.Empty)
+        | "create" -> create dataPath
+        | _ -> failwith "unknown command, try 'session', 'create'"
+        0
+     finally
+        Console.CursorVisible <- visible
