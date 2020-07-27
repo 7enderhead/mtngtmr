@@ -102,9 +102,7 @@ let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
         let c = input.KeyChar
         if timers.Data.ContainsKey(c) then
             let watch = timers.Data.Item(c).Watch
-            if watch.IsRunning then
-                watch.Stop()
-            else
+            if not watch.IsRunning then
                 stopAll timers
                 watch.Start()
         elif not (Char.IsControl(c)) then
