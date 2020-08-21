@@ -67,7 +67,7 @@ let stopAll (timers: Timers) =
     |> Seq.iter (fun entry -> entry.Value.Watch.Stop())
 
 let format (span: TimeSpan) =
-    span.ToString(@"hh\:mm\:ss")
+     sprintf "%03i:%02i" (span.Hours * 60 + span.Minutes) span.Seconds
 
 let formatPercentage (part: TimeSpan) (total: TimeSpan) =
     sprintf "%s%%" (String.Format("{0,3:0}", part.Divide(total) * 100.0))
@@ -75,20 +75,20 @@ let formatPercentage (part: TimeSpan) (total: TimeSpan) =
 let showOutput (timers: Timers) =
     Console.CursorVisible <- false
     let startPosition = getCursorPosition () 
-    let table = ConsoleTable("Act.", "Id", "Name", "Talk Time", "Perc.")
+    let table = ConsoleTable(" ", " ", "Name", "Time", "   %")
     let totalTalkTime = timers.Data |> Seq.fold (fun (acc: TimeSpan) t -> acc.Add(t.Value.Watch.Elapsed)) (TimeSpan())
     timers.Data
     |> Seq.iter
            (fun t ->
                 let elapsed = t.Value.Watch.Elapsed
-                table.AddRow((if t.Value.Watch.IsRunning then "--->" else String.Empty),
+                table.AddRow((if t.Value.Watch.IsRunning then ">" else String.Empty),
                              t.Key,
                              t.Value.Shortcut.Name,
                              format elapsed,
                              formatPercentage elapsed totalTalkTime)
                 |> ignore)
     let totalTime = DateTime.Now.Subtract(timers.StartTime)
-    table.AddRow(String.Empty, ' ', "Total Talk", format totalTalkTime, "----")
+    table.AddRow(String.Empty, ' ', "Talk:", format totalTalkTime, "----")
     |> (fun t -> t.AddRow(String.Empty, ' ', "Total", format totalTime, formatPercentage totalTalkTime totalTime ))
     |> (fun t -> t.Write(Format.Minimal))
     let endPosition = getCursorPosition ()
@@ -102,9 +102,7 @@ let handleKeyPress (input: ConsoleKeyInfo) (timers: Timers) =
         let c = input.KeyChar
         if timers.Data.ContainsKey(c) then
             let watch = timers.Data.Item(c).Watch
-            if watch.IsRunning then
-                watch.Stop()
-            else
+            if not watch.IsRunning then
                 stopAll timers
                 watch.Start()
         elif not (Char.IsControl(c)) then
