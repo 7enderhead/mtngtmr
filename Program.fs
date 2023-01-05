@@ -2,6 +2,7 @@
 open System.Collections.Generic
 open System.Diagnostics
 open System.IO
+open System.Runtime.InteropServices
 open System.Text
 open Newtonsoft.Json
 open ConsoleTables
@@ -160,9 +161,14 @@ let session (dataPath: string) (name: string) =
         let newData = { data with Sessions = Seq.append data.Sessions (Seq.singleton newSession) }
         save dataPath newData
 
+let isCursorVisible () =
+    if RuntimeInformation.IsOSPlatform(OSPlatform.Windows) then
+        Console.CursorVisible // only supported on Windows, PlatformNotSupportedException otherwise :-(
+    else true // best bet
+
 [<EntryPoint>]
 let main argv =
-    let visible = Console.CursorVisible
+    let visible = isCursorVisible ()
     try
         JsonConvert.DefaultSettings <- System.Func<_>(jsonSettings)
         Console.CursorVisible <- false
@@ -173,4 +179,4 @@ let main argv =
         | _ -> failwith "unknown command, try 'session', 'create'"
         0
     finally
-        Console.CursorVisible <- visible
+        Console.CursorVisible <- true
